@@ -245,7 +245,19 @@ module PayPal::SDK::Core
       def read_configurations(file_name = "config/paypal.yml")
         erb = ERB.new(File.read(file_name))
         erb.filename = file_name
-        YAML.load(erb.result)
+
+        # Fix for Ruby 3.1 / Psych 4.x incompatibility described in this issue: https://bugs.ruby-lang.org/issues/17866
+        #
+        # Ruby 3.0 comes with Psych 3, while Ruby 3.1 comes with Psych 4, which has a major breaking change (diff 3.3.2 → 4.0.0).
+        # - The new YAML loading methods (Psych 4) do not load aliases unless they get the aliases: true argument.
+        # - The old YAML loading methods (Psych 3) do not support the aliases keyword.
+        # 
+        # More details here: https://stackoverflow.com/a/71192990/6411706
+        begin
+          YAML.load(erb.result, aliases: true)
+        rescue ArgumentError
+          YAML.load(erb.result)
+        end
       end
 
     end
